@@ -1,0 +1,981 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12897B">
+<meta name="description" content="Clean AF — an honest, on-device phone cleanup tool: find duplicate photos, see where your photos back up, list apps with descriptions, subscriptions and free alternatives, and clean up leftovers.">
+<title>Clean AF · phone cleanup</title>
+<style>html,body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<style>
+  :root{
+    --paper:#F4F7F6; --surface:#FFFFFF; --surface-2:#EAF0EE; --raise:#FBFDFC;
+    --ink:#12292E; --muted:#5C726F; --faint:#8598954a;
+    --line:#DBE6E2; --line-strong:#C4D4CF;
+    --accent:#12897B; --accent-strong:#0B685D; --accent-wash:#DCEFEB;
+    --good:#2A945F; --good-wash:#DCF0E6;
+    --warn:#B4791A; --warn-wash:#F6ECD6;
+    --crit:#CB553F; --crit-wash:#F6E0DA;
+    --shadow:0 1px 2px rgba(18,41,46,.06), 0 8px 24px -12px rgba(18,41,46,.18);
+    --radius:16px; --radius-sm:10px;
+    --tap:#0000;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --paper:#0B1618; --surface:#122529; --surface-2:#183337; --raise:#16302F;
+      --ink:#E9F1EF; --muted:#9AAEAA; --faint:#5a807a2e;
+      --line:#22403F; --line-strong:#2E514F;
+      --accent:#37C1AC; --accent-strong:#57D3BF; --accent-wash:#123531;
+      --good:#4FBE85; --good-wash:#123128;
+      --warn:#D5A24A; --warn-wash:#33290F;
+      --crit:#E67A63; --crit-wash:#3A1E17;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 30px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="light"]{
+    --paper:#F4F7F6; --surface:#FFFFFF; --surface-2:#EAF0EE; --raise:#FBFDFC;
+    --ink:#12292E; --muted:#5C726F; --line:#DBE6E2; --line-strong:#C4D4CF;
+    --accent:#12897B; --accent-strong:#0B685D; --accent-wash:#DCEFEB;
+    --good:#2A945F; --good-wash:#DCF0E6; --warn:#B4791A; --warn-wash:#F6ECD6;
+    --crit:#CB553F; --crit-wash:#F6E0DA;
+    --shadow:0 1px 2px rgba(18,41,46,.06), 0 8px 24px -12px rgba(18,41,46,.18);
+  }
+  :root[data-theme="dark"]{
+    --paper:#0B1618; --surface:#122529; --surface-2:#183337; --raise:#16302F;
+    --ink:#E9F1EF; --muted:#9AAEAA; --line:#22403F; --line-strong:#2E514F;
+    --accent:#37C1AC; --accent-strong:#57D3BF; --accent-wash:#123531;
+    --good:#4FBE85; --good-wash:#123128; --warn:#D5A24A; --warn-wash:#33290F;
+    --crit:#E67A63; --crit-wash:#3A1E17;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 30px -14px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding-bottom:88px;
+  }
+  h1,h2,h3{margin:0; line-height:1.15; text-wrap:balance; letter-spacing:-.015em}
+  p{margin:0}
+  button{font-family:inherit; cursor:pointer; -webkit-tap-highlight-color:var(--tap)}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* ---- top bar ---- */
+  .topbar{
+    position:sticky; top:0; z-index:40; background:color-mix(in srgb,var(--paper) 86%,transparent);
+    backdrop-filter:saturate(1.4) blur(10px); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:12px; padding:12px 16px;
+  }
+  .brand{display:flex; align-items:center; gap:10px; margin-right:auto; min-width:0}
+  .mark{width:30px; height:30px; flex:0 0 auto; border-radius:9px;
+    background:linear-gradient(150deg,var(--accent),var(--accent-strong));
+    display:grid; place-items:center; box-shadow:var(--shadow)}
+  .mark svg{width:18px;height:18px}
+  .brand b{font-size:16px; letter-spacing:-.02em; white-space:nowrap}
+  .brand span{display:block; font-size:11px; color:var(--muted); letter-spacing:.02em; margin-top:-2px}
+  .iconbtn{
+    width:40px;height:40px; flex:0 0 auto; border-radius:11px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); display:grid; place-items:center;
+  }
+  .iconbtn svg{width:19px;height:19px}
+  .iconbtn.live{background:var(--accent); color:#fff; border-color:transparent;
+    box-shadow:0 0 0 0 var(--accent); animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}
+    70%{box-shadow:0 0 0 12px transparent} 100%{box-shadow:0 0 0 0 transparent}}
+
+  /* ---- shell ---- */
+  main{max-width:820px; margin:0 auto; padding:18px 16px 8px}
+  .view{display:none; animation:rise .28s ease both}
+  .view.active{display:block}
+  @keyframes rise{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){.view,.view.active{animation:none}}
+
+  .lead{margin-bottom:18px}
+  .eyebrow{display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.09em; color:var(--accent-strong);
+    background:var(--accent-wash); padding:5px 10px; border-radius:999px}
+  .lead h1{font-size:clamp(22px,6vw,29px); margin:12px 0 6px; font-weight:800}
+  .lead p{color:var(--muted); max-width:60ch}
+
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:18px; margin-bottom:14px}
+  .card h2{font-size:17px; font-weight:750}
+  .card > h2 + p{color:var(--muted); font-size:13.5px; margin-top:4px}
+
+  /* summary tiles */
+  .tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px}
+  .tile{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius-sm);
+    padding:13px 12px; box-shadow:var(--shadow)}
+  .tile .k{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700}
+  .tile .v{font-size:23px; font-weight:800; margin-top:3px; letter-spacing:-.02em}
+  .tile .v small{font-size:12px; font-weight:600; color:var(--muted)}
+
+  /* buttons */
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    border-radius:11px; border:1px solid transparent; padding:11px 15px; font-size:14px;
+    font-weight:650; background:var(--surface-2); color:var(--ink)}
+  .btn svg{width:16px;height:16px}
+  .btn.primary{background:var(--accent); color:#fff}
+  .btn.primary:hover{background:var(--accent-strong)}
+  .btn.ghost{background:transparent; border-color:var(--line-strong); color:var(--ink)}
+  .btn.danger{background:var(--crit-wash); color:var(--crit); border-color:transparent}
+  .btn.wide{width:100%}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap}
+
+  .chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700;
+    padding:4px 9px; border-radius:999px; letter-spacing:.01em}
+  .chip.keep{background:var(--good-wash); color:var(--good)}
+  .chip.remove{background:var(--crit-wash); color:var(--crit)}
+  .chip.warn{background:var(--warn-wash); color:var(--warn)}
+  .chip.info{background:var(--accent-wash); color:var(--accent-strong)}
+  .chip.sub{background:var(--warn-wash); color:var(--warn)}
+  .chip.free{background:var(--good-wash); color:var(--good)}
+
+  /* dropzone */
+  .drop{border:1.5px dashed var(--line-strong); border-radius:var(--radius); padding:26px 18px;
+    text-align:center; background:var(--raise); transition:border-color .2s,background .2s}
+  .drop.hot{border-color:var(--accent); background:var(--accent-wash)}
+  .drop svg{width:34px;height:34px; color:var(--accent)}
+  .drop h3{font-size:15.5px; margin:10px 0 4px}
+  .drop p{font-size:12.5px; color:var(--muted); margin-bottom:14px}
+  .hidden-input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+
+  /* duplicate groups */
+  .grp{border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; margin-top:12px; background:var(--surface)}
+  .grp-h{display:flex; align-items:center; gap:10px; padding:11px 13px; background:var(--surface-2); flex-wrap:wrap}
+  .grp-h .t{font-weight:700; font-size:13.5px}
+  .grp-h .s{color:var(--muted); font-size:12px; margin-left:auto}
+  .thumbs{display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; padding:12px}
+  .thumb{border:1px solid var(--line); border-radius:12px; overflow:hidden; position:relative; background:var(--surface-2)}
+  .thumb img{width:100%; height:104px; object-fit:cover; display:block}
+  .thumb.sel{outline:2.5px solid var(--crit); outline-offset:-2px}
+  .thumb.orig{outline:2.5px solid var(--good); outline-offset:-2px}
+  .thumb .meta{padding:8px 9px}
+  .thumb .fn{font-size:11.5px; font-weight:650; word-break:break-word; line-height:1.3}
+  .thumb .fp{font-size:10.5px; color:var(--muted); word-break:break-all; margin-top:2px}
+  .thumb .sz{font-size:11px; color:var(--muted); margin-top:3px; font-variant-numeric:tabular-nums}
+  .thumb .tag{position:absolute; top:7px; left:7px; z-index:2}
+  .thumb .pick{position:absolute; top:7px; right:7px; width:24px;height:24px; border-radius:7px;
+    border:1px solid var(--line-strong); background:color-mix(in srgb,var(--surface) 80%,transparent);
+    display:grid; place-items:center}
+  .thumb.sel .pick{background:var(--crit); border-color:var(--crit); color:#fff}
+  .thumb .pick svg{width:15px;height:15px; opacity:0}
+  .thumb.sel .pick svg{opacity:1}
+
+  .progress{height:7px; border-radius:99px; background:var(--surface-2); overflow:hidden; margin-top:12px}
+  .progress i{display:block; height:100%; width:0; background:var(--accent); transition:width .18s}
+
+  /* generic list rows */
+  .row{display:flex; align-items:center; gap:12px; padding:13px; border:1px solid var(--line);
+    border-radius:12px; background:var(--surface); margin-top:10px}
+  .row .body{min-width:0; flex:1}
+  .row .body h3{font-size:14.5px; font-weight:700; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .row .body p{font-size:12.5px; color:var(--muted); margin-top:3px}
+  .row .size{font-weight:800; font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap}
+  .row .size small{display:block; font-size:10px; color:var(--muted); font-weight:600}
+  .check{width:22px;height:22px; flex:0 0 auto; border-radius:6px; border:1.5px solid var(--line-strong);
+    background:var(--surface); display:grid; place-items:center}
+  .check svg{width:14px;height:14px; opacity:0; color:#fff}
+  .row.on .check{background:var(--crit); border-color:var(--crit)}
+  .row.on .check svg{opacity:1}
+  .row.on{border-color:var(--crit); background:var(--crit-wash)}
+
+  /* forms */
+  label.field{display:block; margin-top:11px}
+  label.field span{display:block; font-size:12px; font-weight:650; color:var(--muted); margin-bottom:5px}
+  input[type=text],input[type=number],select,textarea{
+    width:100%; font:inherit; font-size:14px; color:var(--ink); background:var(--raise);
+    border:1px solid var(--line-strong); border-radius:10px; padding:10px 12px}
+  textarea{resize:vertical; min-height:56px}
+  input:focus,select:focus,textarea:focus,button:focus-visible,.thumb .pick:focus-visible{
+    outline:2.5px solid var(--accent); outline-offset:1px}
+  .switchrow{display:flex; align-items:center; gap:10px; margin-top:12px}
+  .switch{position:relative; width:44px; height:26px; flex:0 0 auto}
+  .switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer}
+  .switch .track{position:absolute; inset:0; border-radius:99px; background:var(--line-strong); transition:background .18s}
+  .switch .knob{position:absolute; top:3px; left:3px; width:20px;height:20px; border-radius:50%;
+    background:#fff; transition:transform .18s; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .switch input:checked + .track{background:var(--accent)}
+  .switch input:checked ~ .knob{transform:translateX(18px)}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+
+  /* service cards / accordions */
+  .svc{border:1px solid var(--line); border-radius:14px; margin-top:10px; overflow:hidden; background:var(--surface)}
+  .svc-h{display:flex; align-items:center; gap:12px; padding:13px; width:100%; text-align:left;
+    background:none; border:none; color:inherit}
+  .svc-ico{width:36px;height:36px; border-radius:10px; flex:0 0 auto; display:grid; place-items:center;
+    font-weight:800; font-size:15px; color:#fff}
+  .svc-h .nm{font-weight:700; font-size:14.5px}
+  .svc-h .sub{font-size:12px; color:var(--muted)}
+  .svc-h .caret{margin-left:auto; color:var(--muted); transition:transform .2s}
+  .svc.open .caret{transform:rotate(180deg)}
+  .svc-b{display:none; padding:0 13px 14px; border-top:1px solid var(--line)}
+  .svc.open .svc-b{display:block}
+  .steps{list-style:none; padding:0; margin:12px 0 0; counter-reset:s}
+  .steps li{position:relative; padding:6px 0 6px 30px; font-size:13px; color:var(--ink)}
+  .steps li::before{counter-increment:s; content:counter(s); position:absolute; left:0; top:5px;
+    width:21px;height:21px; border-radius:50%; background:var(--accent-wash); color:var(--accent-strong);
+    font-size:11px; font-weight:800; display:grid; place-items:center}
+
+  .note{display:flex; gap:11px; padding:13px; border-radius:12px; font-size:13px; margin-top:12px;
+    background:var(--warn-wash); color:color-mix(in srgb,var(--warn) 82%,var(--ink))}
+  .note.info{background:var(--accent-wash); color:color-mix(in srgb,var(--accent-strong) 78%,var(--ink))}
+  .note svg{width:18px;height:18px; flex:0 0 auto; margin-top:1px}
+  .note b{font-weight:750}
+
+  .checklist{list-style:none; padding:0; margin:12px 0 0}
+  .checklist li{display:flex; gap:11px; padding:11px 0; border-top:1px solid var(--line); font-size:13.5px}
+  .checklist li:first-child{border-top:none}
+  .checklist .n{flex:0 0 auto; width:22px;height:22px; border-radius:7px; background:var(--surface-2);
+    color:var(--accent-strong); font-weight:800; font-size:12px; display:grid; place-items:center}
+  .checklist code{background:var(--surface-2); padding:1px 6px; border-radius:6px; font-size:12px; word-break:break-all}
+
+  .empty{text-align:center; color:var(--muted); padding:26px 12px; font-size:13.5px}
+
+  /* voice panel */
+  .voicebar{display:none; align-items:center; gap:12px; margin:0 0 14px; padding:13px;
+    border:1px solid var(--accent); background:var(--accent-wash); border-radius:14px}
+  .voicebar.show{display:flex}
+  .voicebar .dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex:0 0 auto;animation:pulse 1.4s infinite}
+  .voicebar p{font-size:13px; min-width:0}
+  .voicebar p b{font-weight:750; color:var(--accent-strong)}
+  .voicebar .x{margin-left:auto}
+
+  /* bottom tabs */
+  .tabbar{position:fixed; bottom:0; left:0; right:0; z-index:45; display:flex;
+    background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(10px);
+    border-top:1px solid var(--line); padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
+  .tab{flex:1; background:none; border:none; color:var(--muted); display:flex; flex-direction:column;
+    align-items:center; gap:3px; padding:5px 2px; border-radius:12px; font-size:10.5px; font-weight:650}
+  .tab svg{width:22px;height:22px}
+  .tab.active{color:var(--accent-strong)}
+  .tab.active svg{color:var(--accent)}
+
+  @media (min-width:900px){
+    body{padding-bottom:0; display:grid; grid-template-columns:220px 1fr; min-height:100vh}
+    .topbar{grid-column:1 / -1}
+    .tabbar{position:sticky; top:65px; align-self:start; flex-direction:column; height:calc(100vh - 65px);
+      border-top:none; border-right:1px solid var(--line); padding:14px 12px; gap:4px; background:transparent}
+    .tab{flex-direction:row; justify-content:flex-start; gap:11px; font-size:14px; padding:11px 12px; width:100%}
+    .tab.active{background:var(--accent-wash)}
+    main{grid-column:2; max-width:760px; margin:0; padding:22px}
+  }
+  @media (max-width:380px){ .tiles{grid-template-columns:1fr 1fr} .tab span{display:none} }
+  #voiceBtn,#guideStart{touch-action:none; user-select:none; -webkit-user-select:none}
+  .alt{margin-top:6px; font-size:12px; color:var(--good); font-weight:650}
+  .alt b{color:var(--good)}
+</style>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/><path d="M10 11v6M14 11v6"/></svg>
+    </div>
+    <div><b>Clean AF</b><span>phone cleanup, honestly</span></div>
+  </div>
+  <button class="iconbtn" id="voiceBtn" title="Voice assistant" aria-label="Voice assistant">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg>
+  </button>
+  <button class="iconbtn" id="themeBtn" title="Switch light / dark" aria-label="Switch theme">
+    <svg id="themeIco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button>
+</div>
+
+<nav class="tabbar" id="tabbar">
+  <button class="tab active" data-tab="dupes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="13" rx="2"/><path d="M8 21h11a2 2 0 0 0 2-2V8"/></svg><span>Duplicates</span></button>
+  <button class="tab" data-tab="photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6a2 2 0 0 0-2-2h-9M3 9v9a2 2 0 0 0 2 2h14"/><path d="M3 6a2 2 0 0 1 2-2h1l1.5-2h0M8 13l2.5-3 3 3.5L16 11l3 4"/><circle cx="8" cy="8" r="1.5"/></svg><span>Photos</span></button>
+  <button class="tab" data-tab="apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Apps</span></button>
+  <button class="tab" data-tab="leftovers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></svg><span>Cleanup</span></button>
+  <button class="tab" data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1.9-1.1 1.8M12 17h.01"/></svg><span>Guide</span></button>
+</nav>
+
+<main>
+  <div class="voicebar" id="voicebar">
+    <span class="dot"></span>
+    <p id="voiceMsg"><b>Hold &amp; speak…</b> try "find duplicates", "where do my photos go", or "show my apps".</p>
+    <button class="iconbtn x" id="voiceStop" aria-label="Stop listening"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <!-- ============ DUPLICATES ============ -->
+  <section class="view active" id="view-dupes" aria-label="Duplicate photo finder">
+    <div class="lead">
+      <span class="eyebrow">Step 1 · Reclaim space</span>
+      <h1>Find duplicate photos</h1>
+      <p>Pick photos from your phone and I'll group identical and near-identical shots side by side, keep the best one, and build you an exact list to delete.</p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="k">Scanned</div><div class="v tnum" id="dScanned">0</div></div>
+      <div class="tile"><div class="k">Duplicates</div><div class="v tnum" id="dDupes">0</div></div>
+      <div class="tile"><div class="k">Reclaimable</div><div class="v tnum" id="dSpace">0<small> MB</small></div></div>
+    </div>
+
+    <div class="card">
+      <div class="drop" id="drop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+        <h3>Choose photos to scan</h3>
+        <p>Nothing leaves your phone — all matching happens on-device, in your browser.</p>
+        <div class="btnrow" style="justify-content:center">
+          <button class="btn primary" id="pickPhotos">Select photos</button>
+          <button class="btn ghost" id="pickFolder">Select a folder</button>
+        </div>
+        <input class="hidden-input" id="filePhotos" type="file" accept="image/*" multiple>
+        <input class="hidden-input" id="fileFolder" type="file" accept="image/*" multiple webkitdirectory directory>
+      </div>
+      <div class="progress" id="progWrap" style="display:none"><i id="prog"></i></div>
+      <p id="scanStatus" style="display:none; font-size:12.5px; color:var(--muted); margin-top:8px"></p>
+    </div>
+
+    <div id="dupeResults"></div>
+  </section>
+
+  <!-- ============ PHOTOS DASHBOARD ============ -->
+  <section class="view" id="view-photos" aria-label="Photo upload dashboard">
+    <div class="lead">
+      <span class="eyebrow">Know where your pictures go</span>
+      <h1>Photo upload dashboard</h1>
+      <p>Every service that can auto-upload your photos, and exactly where to switch it off. Mark the <b>one</b> place you actually want backups — turn the rest off.</p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="k">Services here</div><div class="v tnum" id="pTotal">0</div></div>
+      <div class="tile"><div class="k">Backup ON</div><div class="v tnum" id="pOn">0</div></div>
+      <div class="tile"><div class="k">Your home</div><div class="v" id="pHome" style="font-size:15px">—</div></div>
+    </div>
+
+    <div class="note info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div><b>An app can't flip another app's switch for you.</b> No cleaner can — the phone blocks it on purpose. So this is a control panel: tap a service to see the exact toggle, then mark which one is your "home" so you always know where a new photo lands.</div>
+    </div>
+
+    <div id="svcList"></div>
+  </section>
+
+  <!-- ============ APPS ============ -->
+  <section class="view" id="view-apps" aria-label="App inventory">
+    <div class="lead">
+      <span class="eyebrow">Untangle your app list</span>
+      <h1>App inventory &amp; subscriptions</h1>
+      <p>Log the apps you're unsure about — with size and whether they cost money — so you can decide what to keep. Don't recognise one? Check the reference list below.</p>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><div class="k">Tracked</div><div class="v tnum" id="aCount">0</div></div>
+      <div class="tile"><div class="k">Paid subs</div><div class="v tnum" id="aSubs">0</div></div>
+      <div class="tile"><div class="k">Total size</div><div class="v tnum" id="aSize">0<small> MB</small></div></div>
+    </div>
+
+    <div class="note info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div><b>How this works.</b> A web page can't read your installed-app list on its own, so add the ones you're unsure about — or pull them straight from the <b>reference list</b> below, which already tells you what each app does, whether it charges a subscription, and a <b>free alternative</b> that does the same job. Then export a confirm-first uninstall list — you approve every removal.</div>
+    </div>
+
+    <div class="card">
+      <h2>Add an app</h2>
+      <p>Long-press an app on your phone → <b>App info</b> shows its size. Type what you find here.</p>
+      <div class="grid2">
+        <label class="field"><span>App name</span><input type="text" id="fName" placeholder="e.g. Photo Blur Pro"></label>
+        <label class="field"><span>Size (MB)</span><input type="number" id="fSize" placeholder="0" min="0" inputmode="numeric"></label>
+      </div>
+      <div class="grid2">
+        <label class="field"><span>Category</span>
+          <select id="fCat"><option>Unknown</option><option>Photos &amp; camera</option><option>Social</option><option>Games</option><option>Shopping</option><option>Streaming</option><option>Health &amp; fitness</option><option>Productivity</option><option>Utility / cleaner</option><option>Finance</option></select>
+        </label>
+        <label class="field"><span>Last opened</span>
+          <select id="fUsed"><option>Not sure</option><option>This week</option><option>This month</option><option>Months ago</option><option>Never opened it</option></select>
+        </label>
+      </div>
+      <label class="field"><span>Note to self (optional)</span><input type="text" id="fNote" placeholder="e.g. free trial ends soon?"></label>
+      <div class="switchrow">
+        <label class="switch"><input type="checkbox" id="fSub"><span class="track"></span><span class="knob"></span></label>
+        <div style="font-size:13.5px"><b>Costs a subscription</b><div style="color:var(--muted); font-size:12px">Count free trials as paid — they charge when the trial ends.</div></div>
+      </div>
+      <div class="btnrow" style="margin-top:14px"><button class="btn primary wide" id="addApp">Add to my list</button></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">
+        <h2 style="margin-right:auto">Your apps</h2>
+        <button class="btn ghost" id="sortSize">Biggest first</button>
+        <button class="btn ghost" id="exportApps">Export list</button>
+      </div>
+      <div id="appList"><p class="empty">No apps yet — add one above, or pull from the reference list.</p></div>
+      <div class="btnrow" id="appActions" style="margin-top:12px; display:none">
+        <button class="btn danger" id="markUninstall">Build uninstall list (<span id="selCount">0</span>)</button>
+        <button class="btn ghost" id="clearSel">Clear selection</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Don't recognise an app? Reference list</h2>
+      <p>Commonly-forgotten apps — what each does, whether it charges a subscription, and a <b>free alternative</b> (shown in green). Tap <b>Track</b> to add one to your list.</p>
+      <label class="field" style="margin-top:12px"><span>Search</span><input type="text" id="refSearch" placeholder="Type an app name…"></label>
+      <div id="refList"></div>
+    </div>
+  </section>
+
+  <!-- ============ LEFTOVERS ============ -->
+  <section class="view" id="view-leftovers" aria-label="Leftover files cleanup">
+    <div class="lead">
+      <span class="eyebrow">After you uninstall</span>
+      <h1>Clear leftover files</h1>
+      <p>Deleted apps often leave folders behind. Here's how to find and safely remove them — plus an honest note on what's genuinely safe to touch.</p>
+    </div>
+
+    <div class="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <div><b>Golden rule:</b> only delete a folder if its name clearly matches an app you already uninstalled. When unsure, leave it — a stray 20&nbsp;MB folder is cheaper than a broken app.</div>
+    </div>
+
+    <div class="card">
+      <h2>Find orphaned folders (Android)</h2>
+      <ul class="checklist">
+        <li><span class="n">1</span><div>Open your <b>Files</b> app (or Files by Google) and go to <b>Internal storage</b>.</div></li>
+        <li><span class="n">2</span><div>Open <code>Android/data</code> and <code>Android/obb</code>. Folders here are named by app, like <code>com.zynga.words</code>. If the app is gone, that folder is safe to delete.</div></li>
+        <li><span class="n">3</span><div>Back in Internal storage, look for app-named folders (a game or camera app often makes one). Match the name to something you removed before deleting.</div></li>
+        <li><span class="n">4</span><div>Empty the <code>.thumbnails</code> folder inside <b>DCIM</b> — it rebuilds itself and can hold hundreds of MB.</div></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>The safe one-tap cleanups</h2>
+      <ul class="checklist">
+        <li><span class="n">A</span><div><b>App cache:</b> Settings → Apps → pick an app → Storage → <b>Clear cache</b>. Frees space, keeps your logins &amp; data.</div></li>
+        <li><span class="n">B</span><div><b>Downloads folder:</b> old PDFs, installers and images pile up here. Sort by size and clear what you don't need.</div></li>
+        <li><span class="n">C</span><div><b>Messaging media:</b> WhatsApp / Messages save every received photo &amp; video. Use their in-app <i>Storage</i> tool to bulk-delete.</div></li>
+      </ul>
+      <div class="note info">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><b>iPhone?</b> There's no open file system to browse. Use Settings → General → <b>iPhone Storage</b> — it lists every app by size and offers "Offload" (frees space, keeps data) per app.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GUIDE ============ -->
+  <section class="view" id="view-guide" aria-label="Guide and assistant">
+    <div class="lead">
+      <span class="eyebrow">Hands-free help</span>
+      <h1>Voice assistant &amp; guide</h1>
+      <p>Tap the microphone in the top corner any time and speak — the assistant moves you around the app and reads instructions aloud.</p>
+    </div>
+
+    <div class="card">
+      <h2>Talk to it</h2>
+      <p><b>Hold the mic and speak, then release to send.</b> Works fully on your phone using its own speech engine — nothing is sent anywhere, and it only listens while you hold the button.</p>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn primary" id="guideStart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg><span id="guideStartLabel">Hold to talk</span></button>
+        <button class="btn ghost" id="guideRead">Read this screen aloud</button>
+      </div>
+      <div id="voiceUnsupported" class="note" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div>This browser doesn't support voice input. Everything still works by tapping. Chrome on Android gives the best voice results.</div>
+      </div>
+      <p style="font-size:12.5px; color:var(--muted); margin-top:12px">Hold the mic (top corner) and say: <i>"find duplicates" · "where do my photos go" · "show my apps" · "clean up leftovers" · "read this"</i></p>
+    </div>
+
+    <div class="note info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <div><b>Straight talk about "Claude in the app."</b> A full back-and-forth AI chat needs a live internet connection to Anthropic's servers, which a shareable web page like this can't open. The built-in voice guide here is offline and private. For real conversational Claude built in, the next step is a native app — see the note below.</div>
+    </div>
+
+    <div class="card">
+      <h2>What this tool can and can't do</h2>
+      <div style="margin-top:6px">
+        <div class="row" style="margin-top:8px"><div class="body"><h3><span class="chip keep">Does now</span> Find &amp; group duplicate photos</h3><p>On-device matching of exact and near-identical images.</p></div></div>
+        <div class="row" style="margin-top:8px"><div class="body"><h3><span class="chip keep">Does now</span> Show where photos back up + how to change it</h3></div></div>
+        <div class="row" style="margin-top:8px"><div class="body"><h3><span class="chip keep">Does now</span> Track apps, sizes &amp; subscriptions</h3></div></div>
+        <div class="row" style="margin-top:8px"><div class="body"><h3><span class="chip warn">Guides you</span> Delete files &amp; uninstall apps</h3><p>The phone blocks any app from doing this silently — so the tool builds you an exact list and walks you to the right screen.</p></div></div>
+        <div class="row" style="margin-top:8px"><div class="body"><h3><span class="chip remove">Needs a native app</span> Auto-read your installed apps · live AI chat</h3><p>A web page can't pull your installed-app list for you or open a live connection to an AI. An installed app with the right permissions can — the natural next step.</p></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  var fmt=function(n){return n.toLocaleString(undefined,{maximumFractionDigits:0})};
+  var mb=function(bytes){return bytes/1048576};
+
+  /* ---------- theme ---------- */
+  var root=document.documentElement;
+  function applyThemeIcon(){
+    var dark = getComputedStyle(document.body).backgroundColor;
+    // just swap icon based on explicit attr
+    var t=root.getAttribute('data-theme');
+    var isDark = t ? t==='dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    $('#themeIco').innerHTML = isDark
+      ? '<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'
+      : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  }
+  $('#themeBtn').addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    var isDark = cur ? cur==='dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', isDark?'light':'dark');
+    applyThemeIcon();
+  });
+  applyThemeIcon();
+
+  /* ---------- tab navigation ---------- */
+  var TAB_INTRO={
+    dupes:"Duplicate photo finder. Pick photos and I'll group the copies so you can delete the extras.",
+    photos:"Photo upload dashboard. See every service that backs up your photos and how to switch each one off.",
+    apps:"App inventory. Track your apps by size and whether they cost a subscription.",
+    leftovers:"Cleanup. How to find and safely remove files left behind by apps you deleted.",
+    guide:"Voice assistant and guide. Speak a command and I'll take you there."
+  };
+  function go(tab){
+    $$('.view').forEach(function(v){v.classList.remove('active')});
+    $('#view-'+tab).classList.add('active');
+    $$('.tab').forEach(function(b){b.classList.toggle('active', b.dataset.tab===tab)});
+    window.scrollTo({top:0,behavior:'smooth'});
+    return tab;
+  }
+  $$('.tab').forEach(function(b){b.addEventListener('click',function(){go(b.dataset.tab)})});
+
+  /* ================= DUPLICATE FINDER ================= */
+  var drop=$('#drop');
+  ['dragenter','dragover'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('hot')})});
+  ['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('hot')})});
+  drop.addEventListener('drop',function(ev){ if(ev.dataTransfer&&ev.dataTransfer.files) handleFiles(ev.dataTransfer.files); });
+  $('#pickPhotos').addEventListener('click',function(){$('#filePhotos').click()});
+  $('#pickFolder').addEventListener('click',function(){$('#fileFolder').click()});
+  $('#filePhotos').addEventListener('change',function(e){handleFiles(e.target.files)});
+  $('#fileFolder').addEventListener('change',function(e){handleFiles(e.target.files)});
+
+  async function sha256(buf){
+    if(!(crypto.subtle&&crypto.subtle.digest)) return 'nohash-'+buf.byteLength;
+    var h=await crypto.subtle.digest('SHA-256',buf);
+    return Array.prototype.map.call(new Uint8Array(h),function(b){return('0'+b.toString(16)).slice(-2)}).join('');
+  }
+  var ahCanvas=document.createElement('canvas'); ahCanvas.width=8; ahCanvas.height=8;
+  var ahCtx=ahCanvas.getContext('2d',{willReadFrequently:true});
+  function aHash(img){
+    ahCtx.drawImage(img,0,0,8,8);
+    var d=ahCtx.getImageData(0,0,8,8).data, g=[], sum=0, i;
+    for(i=0;i<64;i++){var v=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2]; g.push(v); sum+=v;}
+    var avg=sum/64, bits=0n;
+    for(i=0;i<64;i++){ bits=(bits<<1n)|(g[i]>=avg?1n:0n); }
+    return bits;
+  }
+  function hamming(a,b){ var x=a^b, c=0; while(x){c+=Number(x&1n); x>>=1n;} return c; }
+  function loadImg(file){
+    return new Promise(function(res){
+      var url=URL.createObjectURL(file), im=new Image();
+      im.onload=function(){res({img:im,url:url})};
+      im.onerror=function(){res(null)};
+      im.src=url;
+    });
+  }
+
+  async function handleFiles(fileList){
+    var files=Array.prototype.slice.call(fileList).filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|gif|webp|bmp|heic)$/i.test(f.name)});
+    if(!files.length) return;
+    $('#progWrap').style.display='block';
+    var status=$('#scanStatus'); status.style.display='block';
+    var items=[], done=0;
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      status.textContent='Reading '+(i+1)+' of '+files.length+' — '+f.name;
+      var rec={file:f,name:f.name,path:f.webkitRelativePath||'',size:f.size,exact:'',ah:null,url:''};
+      try{ rec.exact=await sha256(await f.arrayBuffer()); }catch(e){ rec.exact='e'+f.size+'-'+f.name; }
+      var li=await loadImg(f);
+      if(li){ rec.url=li.url; try{rec.ah=aHash(li.img);}catch(e){} }
+      items.push(rec);
+      done++; $('#prog').style.width=(done/files.length*100)+'%';
+    }
+    status.textContent='Grouping…';
+    renderGroups(items);
+    $('#progWrap').style.display='none'; status.style.display='none';
+  }
+
+  function renderGroups(items){
+    // exact groups
+    var byHash={};
+    items.forEach(function(it){ (byHash[it.exact]=byHash[it.exact]||[]).push(it); });
+    var groups=[], singles=[];
+    Object.keys(byHash).forEach(function(k){ (byHash[k].length>1?groups:singles).push({type:'exact',items:byHash[k]}); });
+    // near-duplicate pass over the leftover singles
+    var pool=[]; singles.forEach(function(g){ pool.push(g.items[0]); });
+    var used=new Array(pool.length).fill(false);
+    for(var a=0;a<pool.length;a++){
+      if(used[a]||pool[a].ah==null) continue;
+      var cluster=[pool[a]]; used[a]=true;
+      for(var b=a+1;b<pool.length;b++){
+        if(used[b]||pool[b].ah==null) continue;
+        if(hamming(pool[a].ah,pool[b].ah)<=5){ cluster.push(pool[b]); used[b]=true; }
+      }
+      if(cluster.length>1) groups.push({type:'near',items:cluster});
+    }
+
+    var wrap=$('#dupeResults'); wrap.innerHTML='';
+    var totalDupes=0, reclaim=0;
+    groups.sort(function(x,y){return y.items.length-x.items.length});
+    groups.forEach(function(g,gi){
+      // keep the largest file as the "original"
+      g.items.sort(function(x,y){return y.size-x.size});
+      var extras=g.items.slice(1);
+      totalDupes+=extras.length;
+      extras.forEach(function(e){reclaim+=e.size});
+      var el=document.createElement('div'); el.className='grp';
+      var head='<div class="grp-h"><span class="chip '+(g.type==='exact'?'remove':'warn')+'">'+(g.type==='exact'?'Identical':'Looks the same')+'</span>'
+        +'<span class="t">'+g.items.length+' copies</span>'
+        +'<span class="s">saves '+mb(reclaimGroup(g)).toFixed(1)+' MB</span></div>';
+      var body='<div class="thumbs">';
+      g.items.forEach(function(it,idx){
+        var orig=idx===0;
+        body+='<div class="thumb '+(orig?'orig':'sel')+'" data-g="'+gi+'" data-i="'+idx+'">'
+          +'<span class="tag chip '+(orig?'keep':'remove')+'">'+(orig?'Keep':'Remove')+'</span>'
+          +(orig?'':'<button class="pick" aria-label="Toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></button>')
+          +(it.url?'<img src="'+it.url+'" alt="">':'<div style="height:104px"></div>')
+          +'<div class="meta"><div class="fn">'+esc(it.name)+'</div>'
+          +(it.path?'<div class="fp">'+esc(it.path)+'</div>':'')
+          +'<div class="sz">'+(it.size/1024).toFixed(0)+' KB</div></div></div>';
+      });
+      body+='</div>';
+      el.innerHTML=head+body;
+      wrap.appendChild(el);
+    });
+
+    // wire selection
+    window.__dupGroups=groups;
+    $$('.thumb .pick',wrap).forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var t=btn.closest('.thumb');
+        t.classList.toggle('sel');
+        var on=t.classList.contains('sel');
+        t.querySelector('.tag').className='tag chip '+(on?'remove':'keep');
+        t.querySelector('.tag').textContent=on?'Remove':'Keep';
+        recalc();
+      });
+    });
+
+    if(groups.length){
+      var bar=document.createElement('div'); bar.className='card'; bar.style.position='sticky'; bar.style.bottom='96px';
+      bar.innerHTML='<div class="btnrow"><button class="btn danger wide" id="exportDel">Build my delete list (<span id="delN">'+totalDupes+'</span> files)</button></div>'
+        +'<p style="font-size:12px;color:var(--muted);margin-top:10px">Green = the copy I\'m keeping. Tap a photo to change your mind. The list gives you exact names &amp; folders to delete in your gallery.</p>';
+      wrap.appendChild(bar);
+      $('#exportDel').addEventListener('click',exportDeleteList);
+    } else {
+      wrap.innerHTML='<div class="card"><p class="empty">No duplicates in that batch — nice and tidy! Try selecting more photos, or a whole folder.</p></div>';
+    }
+
+    $('#dScanned').textContent=fmt(items.length);
+    recalc();
+    function recalc(){
+      var n=$$('.thumb.sel',wrap).length, bytes=0;
+      $$('.thumb.sel',wrap).forEach(function(t){
+        var g=window.__dupGroups[+t.dataset.g]; bytes+=g.items[+t.dataset.i].size;
+      });
+      $('#dDupes').textContent=fmt(n);
+      $('#dSpace').innerHTML=mb(bytes).toFixed(1)+'<small> MB</small>';
+      var dn=$('#delN'); if(dn) dn.textContent=n;
+    }
+  }
+  function reclaimGroup(g){ return g.items.slice(1).reduce(function(s,i){return s+i.size},0); }
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  function exportDeleteList(){
+    var lines=['DUPLICATE PHOTOS — DELETE LIST','Generated by Clean AF ·'+new Date().toLocaleString(),
+      'Delete these in your Gallery/Files app. Keep the ones NOT listed here.','',''];
+    var sel=$$('.thumb.sel'), bytes=0;
+    if(!sel.length){ alert('Nothing selected to delete yet.'); return; }
+    sel.forEach(function(t,idx){
+      var it=window.__dupGroups[+t.dataset.g].items[+t.dataset.i]; bytes+=it.size;
+      lines.push((idx+1)+'. '+it.name);
+      if(it.path) lines.push('    folder: '+it.path);
+      lines.push('    size: '+(it.size/1024).toFixed(0)+' KB');
+    });
+    lines.push(''); lines.push('Total: '+sel.length+' files · '+mb(bytes).toFixed(1)+' MB to reclaim');
+    saveText('duplicate-delete-list.txt', lines.join('\n'));
+  }
+
+  /* ================= SAVE HELPER ================= */
+  async function saveText(filename, text){
+    try{
+      if(window.claude && window.claude.downloads && window.claude.downloads.save){
+        await window.claude.downloads.save({filename:filename, data:text});
+        toast('Saved '+filename); return;
+      }
+    }catch(e){ if(e&&e.code==='declined'){return;} }
+    var blob=new Blob([text],{type:'text/plain'}), url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+    a.remove(); setTimeout(function(){URL.revokeObjectURL(url)},1000);
+  }
+  var toastEl;
+  function toast(msg){
+    if(!toastEl){ toastEl=document.createElement('div');
+      toastEl.style.cssText='position:fixed;left:50%;bottom:104px;transform:translateX(-50%);z-index:99;background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:var(--shadow);opacity:0;transition:opacity .25s;max-width:90%';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent=msg; toastEl.style.opacity='1';
+    clearTimeout(toastEl.__t); toastEl.__t=setTimeout(function(){toastEl.style.opacity='0'},2600);
+  }
+
+  /* ================= PHOTO DASHBOARD ================= */
+  var SERVICES=[
+    {n:'Google Photos',c:'#4285F4',ab:'GP',sub:'Free 15GB, then paid',plat:'Android · iPhone',
+      what:'Backs up every photo &amp; video across your Google account. The most common "where did my pics go" answer on Android.',
+      steps:['Open the Google Photos app','Tap your profile picture (top right)','Photos settings → Backup','Toggle Backup off — or pick which folders back up']},
+    {n:'Apple iCloud Photos',c:'#3693F3',ab:'',plat:'iPhone · iPad',sub:'Free 5GB, then paid',
+      what:'Syncs your whole library to iCloud and every Apple device you own.',
+      steps:['Settings → tap your name at the top','iCloud → Photos','Turn off "Sync this iPhone"']},
+    {n:'Samsung Cloud / Gallery sync',c:'#1428A0',ab:'S',plat:'Samsung',sub:'Free tier, then paid',
+      what:'Samsung phones can sync Gallery to Samsung Cloud or OneDrive automatically.',
+      steps:['Settings → Accounts and backup','Tap "Sync Gallery with OneDrive" / Samsung Cloud','Turn the sync toggle off']},
+    {n:'Amazon Photos',c:'#FF9900',ab:'A',plat:'Android · iPhone',sub:'Free for Prime, else paid',
+      what:'Auto-saves photos if you installed it (often for the free Prime Photos storage).',
+      steps:['Open Amazon Photos','Settings (gear icon)','Turn off "Auto-Save" / Uploads']},
+    {n:'Microsoft OneDrive',c:'#0078D4',ab:'OD',plat:'Android · iPhone',sub:'Free 5GB, then paid',
+      what:'Its "Camera upload" quietly copies every new photo to your Microsoft account.',
+      steps:['Open OneDrive → Me (bottom right)','Settings → Camera upload','Turn Camera upload off']},
+    {n:'Google Drive',c:'#1FA463',ab:'GD',plat:'Android · iPhone',sub:'Shares Google storage',
+      what:'Usually does NOT back up photos itself (Google Photos does) — but worth checking.',
+      steps:['Open Drive → Menu → Settings','Check "Auto Add" / backup options','Leave off unless you want it']},
+    {n:'Dropbox',c:'#0061FF',ab:'DB',plat:'Android · iPhone',sub:'Free 2GB, then paid',
+      what:'"Camera Uploads" saves new photos to Dropbox automatically once enabled.',
+      steps:['Open Dropbox → Account','Camera uploads','Turn it off']},
+    {n:'Facebook / Instagram',c:'#C13584',ab:'FB',plat:'Android · iPhone',sub:'Free',
+      what:'Not usually auto-upload today, but old "sync photos" settings can linger. Worth a check.',
+      steps:['App Settings → search "photos" or "sync"','Disable any photo sync / import option']}
+  ];
+  var svcState=JSON.parse(localStorage.getItem('tw_svc')||'{}');
+  function renderSvc(){
+    var list=$('#svcList'); list.innerHTML=''; var on=0, home='—';
+    SERVICES.forEach(function(s,i){
+      var isOn=!!svcState[s.n]; if(isOn){on++; home=s.n;}
+      var el=document.createElement('div'); el.className='svc'+(i===0?' open':'');
+      var ab=s.ab||s.n.slice(0,2).toUpperCase();
+      el.innerHTML='<button class="svc-h"><span class="svc-ico" style="background:'+s.c+'">'+esc(ab)+'</span>'
+        +'<span><span class="nm">'+esc(s.n)+'</span><span class="sub" style="display:block">'+s.plat+' · '+s.sub+'</span></span>'
+        +'<svg class="caret" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>'
+        +'<div class="svc-b"><p style="font-size:13px;color:var(--muted);margin-top:12px">'+s.what+'</p>'
+        +'<ol class="steps">'+s.steps.map(function(st){return '<li>'+st+'</li>'}).join('')+'</ol>'
+        +'<div class="switchrow" style="margin-top:14px"><label class="switch"><input type="checkbox" '+(isOn?'checked':'')+' data-svc="'+esc(s.n)+'"><span class="track"></span><span class="knob"></span></label>'
+        +'<div style="font-size:13px"><b>This is my backup home</b><div style="color:var(--muted);font-size:12px">Mark the one place you want photos saved.</div></div></div></div>';
+      el.querySelector('.svc-h').addEventListener('click',function(){el.classList.toggle('open')});
+      el.querySelector('input[data-svc]').addEventListener('change',function(e){
+        svcState[s.n]=e.target.checked; localStorage.setItem('tw_svc',JSON.stringify(svcState)); renderSvc();
+      });
+      list.appendChild(el);
+    });
+    $('#pTotal').textContent=SERVICES.length;
+    $('#pOn').textContent=on;
+    $('#pHome').textContent = on===0?'Not set' : (on===1?home : on+' (too many!)');
+    $('#pHome').style.color = on>1?'var(--warn)':(on===1?'var(--good)':'var(--muted)');
+  }
+  renderSvc();
+
+  /* ================= APP INVENTORY ================= */
+  var apps=JSON.parse(localStorage.getItem('tw_apps')||'[]');
+  var sortDesc=true;
+  function saveApps(){ localStorage.setItem('tw_apps',JSON.stringify(apps)); }
+  function renderApps(){
+    var list=$('#appList');
+    var arr=apps.slice().sort(function(a,b){return sortDesc?b.size-a.size:a.name.localeCompare(b.name)});
+    if(!arr.length){ list.innerHTML='<p class="empty">No apps yet — add one above, or pull from the reference list.</p>'; }
+    else{
+      list.innerHTML=arr.map(function(app){
+        var id=app.id;
+        return '<div class="row '+(app.sel?'on':'')+'" data-id="'+id+'">'
+          +'<button class="check" data-id="'+id+'" aria-label="Select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></button>'
+          +'<div class="body"><h3>'+esc(app.name)+' '+(app.sub?'<span class="chip sub">Paid sub</span>':'<span class="chip free">Free</span>')+'</h3>'
+          +'<p>'+esc(app.cat)+' · opened: '+esc(app.used)+(app.note?' · '+esc(app.note):'')+'</p></div>'
+          +'<div class="size tnum">'+fmt(app.size)+'<small>MB</small></div></div>';
+      }).join('');
+      $$('#appList .check').forEach(function(c){c.addEventListener('click',function(){toggleApp(c.dataset.id)})});
+      $$('#appList .row').forEach(function(r){r.addEventListener('click',function(e){ if(e.target.closest('.check'))return; toggleApp(r.dataset.id);})});
+    }
+    var total=apps.reduce(function(s,a){return s+ (+a.size||0)},0);
+    $('#aCount').textContent=apps.length;
+    $('#aSubs').textContent=apps.filter(function(a){return a.sub}).length;
+    $('#aSize').innerHTML=fmt(total)+'<small> MB</small>';
+    var selN=apps.filter(function(a){return a.sel}).length;
+    $('#appActions').style.display=selN?'flex':'none';
+    $('#selCount').textContent=selN;
+  }
+  function toggleApp(id){ var a=apps.find(function(x){return x.id===id}); if(a){a.sel=!a.sel; saveApps(); renderApps();} }
+  $('#addApp').addEventListener('click',function(){
+    var name=$('#fName').value.trim(); if(!name){ $('#fName').focus(); return; }
+    apps.push({id:'a'+Date.now()+Math.random().toString(36).slice(2,6), name:name,
+      size:+($('#fSize').value||0), cat:$('#fCat').value, used:$('#fUsed').value,
+      note:$('#fNote').value.trim(), sub:$('#fSub').checked, sel:false});
+    saveApps(); renderApps();
+    $('#fName').value=''; $('#fSize').value=''; $('#fNote').value=''; $('#fSub').checked=false;
+    $('#fCat').selectedIndex=0; $('#fUsed').selectedIndex=0; $('#fName').focus();
+    toast('Added '+name);
+  });
+  $('#sortSize').addEventListener('click',function(){ sortDesc=!sortDesc; this.textContent=sortDesc?'Biggest first':'A → Z'; renderApps(); });
+  $('#clearSel').addEventListener('click',function(){ apps.forEach(function(a){a.sel=false}); saveApps(); renderApps(); });
+  $('#markUninstall').addEventListener('click',function(){
+    var sel=apps.filter(function(a){return a.sel}); if(!sel.length)return;
+    var total=sel.reduce(function(s,a){return s+(+a.size||0)},0);
+    var lines=['APPS TO UNINSTALL','Generated by Clean AF ·'+new Date().toLocaleString(),
+      'Uninstall via: long-press the app → Uninstall (or Settings → Apps).',
+      'Cancel any paid subscription SEPARATELY — deleting the app does not stop the charge.','',''];
+    sel.forEach(function(a,i){ lines.push((i+1)+'. '+a.name+'  ('+a.size+' MB)'+(a.sub?'  ⚠ CANCEL SUBSCRIPTION':'')+(a.note?'\n    note: '+a.note:'')); });
+    lines.push(''); lines.push('Frees about '+fmt(total)+' MB · '+sel.length+' apps · '+sel.filter(function(a){return a.sub}).length+' have paid subs to cancel.');
+    saveText('apps-to-uninstall.txt', lines.join('\n'));
+  });
+  $('#exportApps').addEventListener('click',function(){
+    if(!apps.length){toast('No apps to export yet');return;}
+    var lines=['MY APP INVENTORY','Generated by Clean AF ·'+new Date().toLocaleString(),'',''];
+    apps.slice().sort(function(a,b){return b.size-a.size}).forEach(function(a){
+      lines.push(a.name+' — '+a.size+' MB — '+a.cat+' — '+(a.sub?'PAID SUB':'free')+(a.note?' — '+a.note:''));
+    });
+    saveText('my-app-inventory.txt', lines.join('\n'));
+  });
+
+  /* reference database */
+  var REF=[
+    {n:'CapCut',c:'Video editing',s:false,d:'Popular video editor. Basics are free; extra effects/fonts push a Pro subscription.',alt:'Free: CapCut\'s own free tier, or your phone\'s built-in Photos/Gallery video trimmer.'},
+    {n:'Temu',c:'Shopping',s:false,d:'Discount shopping app. Free, but heavy on notifications and data use.',alt:''},
+    {n:'Calm',c:'Health & fitness',s:true,d:'Meditation & sleep. Almost everything is behind a yearly subscription.',alt:'Free: Insight Timer — thousands of free guided meditations and sleep sounds.'},
+    {n:'Headspace',c:'Health & fitness',s:true,d:'Guided meditation. Free trial then a paid subscription.',alt:'Free: Insight Timer, or Smiling Mind (fully free, non-profit).'},
+    {n:'MyFitnessPal',c:'Health & fitness',s:true,d:'Calorie & food tracker. Barcode scan and insights now need Premium.',alt:'Free: Cronometer or FatSecret — both include a free barcode scanner.'},
+    {n:'Noom',c:'Health & fitness',s:true,d:'Weight-loss coaching. Pricey recurring subscription after a cheap trial.',alt:'Free: Cronometer or FatSecret for tracking; free walking/step goals in your health app.'},
+    {n:'Duolingo',c:'Productivity',s:false,d:'Language learning. Free with ads; "Super" removes them for a fee.',alt:'Free: Duolingo\'s ad-supported tier is fully usable; also Anki for vocabulary.'},
+    {n:'Canva',c:'Productivity',s:false,d:'Design & posters. Free tier is generous; Pro unlocks premium assets.',alt:'Free: Canva free tier, or Adobe Express free / PhotoPea in a browser.'},
+    {n:'Grammarly',c:'Productivity',s:true,d:'Writing/grammar helper. Advanced suggestions need Premium.',alt:'Free: LanguageTool (free tier), or your keyboard\'s built-in spell-check.'},
+    {n:'Notion',c:'Productivity',s:false,d:'Notes & docs. Free for personal use; teams pay.',alt:'Free: Google Keep, Apple Notes, or Obsidian.'},
+    {n:'PicsArt',c:'Photos & camera',s:true,d:'Photo editor with a strong push to a Gold subscription and a trial that auto-bills.',alt:'Free: Snapseed (free, by Google) or your phone\'s built-in editor.'},
+    {n:'Lensa',c:'Photos & camera',s:true,d:'AI selfie / avatar app. Trial then recurring charge — a common surprise bill.',alt:'Free: Snapseed for editing; most phone cameras have free portrait filters.'},
+    {n:'FaceApp',c:'Photos & camera',s:true,d:'Face-aging & filters. Pro subscription with a short free trial.',alt:'Free: Snapseed, or the free filters in Instagram / your camera app.'},
+    {n:'Remini',c:'Photos & camera',s:true,d:'AI photo enhancer. A few free uses, then subscription.',alt:'Free: Google Photos "Enhance", or Snapseed\'s Details/Sharpen tools.'},
+    {n:'Cleaner / Booster apps',c:'Utility / cleaner',s:true,d:'"Speed boosters" & junk cleaners. Often do little, show ads, and push a subscription. Usually safe to remove.',alt:'Free: your phone\'s built-in Storage settings do the real cleanup — no app needed.'},
+    {n:'Scanner apps (CamScanner etc.)',c:'Utility / cleaner',s:true,d:'Document scanning. Watermarks/exports pushed behind a subscription.',alt:'Free: Google Drive scan, Apple Notes scan, or Microsoft Lens (all free).'},
+    {n:'Disney+',c:'Streaming',s:true,d:'Streaming service — paid monthly subscription.',alt:'Free: Tubi, Pluto TV, or your library\'s Kanopy/Hoopla.'},
+    {n:'Audible',c:'Streaming',s:true,d:'Audiobooks. Monthly credit subscription from Amazon.',alt:'Free: Libby / OverDrive — free audiobooks with a library card; LibriVox for classics.'},
+    {n:'Spotify',c:'Streaming',s:false,d:'Music. Free with ads; Premium removes them.',alt:'Free: Spotify\'s ad tier, YouTube Music free, or SoundCloud.'},
+    {n:'Robinhood',c:'Finance',s:false,d:'Stock trading app. Free; "Gold" tier is optional paid.',alt:''},
+    {n:'BeReal',c:'Social',s:false,d:'Once-a-day photo social app. Free.',alt:''},
+    {n:'Threads',c:'Social',s:false,d:'Text social app from Instagram. Free.',alt:''},
+    {n:'TikTok',c:'Social',s:false,d:'Short-video app. Free; in-app coins/gifts cost money.',alt:''},
+    {n:'Snapchat',c:'Social',s:false,d:'Disappearing photo/chat app. Free; "Snapchat+" is optional paid.',alt:'The free app is fully usable; Snapchat+ is optional.'},
+    {n:'Pinterest',c:'Social',s:false,d:'Idea & image bookmarking. Free.',alt:''},
+    {n:'Reddit',c:'Social',s:false,d:'Forums & communities. Free; "Premium" removes ads.',alt:''},
+    {n:'X (Twitter)',c:'Social',s:false,d:'Posts & news feed. Free; "Premium/Blue" is optional paid.',alt:'The free app works fully; Premium is optional.'},
+    {n:'LinkedIn',c:'Social',s:true,d:'Jobs & networking. "Premium" is a pricey subscription.',alt:'Free: the standard app covers job search & messaging; Premium is rarely needed.'},
+    {n:'WhatsApp',c:'Messaging',s:false,d:'Messaging & calls over internet. Free (owned by Meta).',alt:''},
+    {n:'Telegram',c:'Messaging',s:false,d:'Messaging with big groups & channels. Free.',alt:''},
+    {n:'Signal',c:'Messaging',s:false,d:'Private, encrypted messaging. Free, non-profit.',alt:'This IS the free, private alternative to other messengers.'},
+    {n:'Netflix',c:'Streaming',s:true,d:'Movies & TV. Paid monthly subscription.',alt:'Free: Tubi, Pluto TV, The Roku Channel, or library Kanopy / Hoopla.'},
+    {n:'Hulu',c:'Streaming',s:true,d:'TV & movies. Paid subscription.',alt:'Free: Tubi or Pluto TV.'},
+    {n:'Max (HBO)',c:'Streaming',s:true,d:'HBO shows & movies. Paid subscription.',alt:'Free: Tubi, Pluto TV, or library Kanopy / Hoopla.'},
+    {n:'Paramount+',c:'Streaming',s:true,d:'CBS/Paramount shows. Paid subscription.',alt:'Free: Pluto TV (same company, free with ads).'},
+    {n:'Peacock',c:'Streaming',s:true,d:'NBC shows & movies. Paid tiers.',alt:'Free: Peacock has a free tier; also Tubi.'},
+    {n:'Prime Video',c:'Streaming',s:true,d:'Amazon\'s movies/TV. Needs Prime or a subscription.',alt:'Free: Amazon Freevee, Tubi, or Pluto TV.'},
+    {n:'YouTube',c:'Streaming',s:false,d:'Videos. Free with ads; "Premium" removes them.',alt:'The free app works fully; Premium (ad-free) is optional.'},
+    {n:'Google Maps',c:'Navigation',s:false,d:'Maps & directions. Free.',alt:''},
+    {n:'Waze',c:'Navigation',s:false,d:'Community traffic & directions. Free (owned by Google).',alt:''},
+    {n:'Uber / Lyft',c:'Transport',s:false,d:'Ride-hailing. Free apps; you pay per ride.',alt:''},
+    {n:'DoorDash / Uber Eats',c:'Food delivery',s:false,d:'Food delivery. Free apps; fees per order (and optional paid membership).',alt:'Skip the membership — ordering pickup direct from a restaurant avoids delivery fees.'},
+    {n:'Venmo / PayPal / Zelle',c:'Finance',s:false,d:'Send & receive money. Free for basic transfers.',alt:''},
+    {n:'Coinbase',c:'Finance',s:false,d:'Buy/sell crypto. Free app; trading fees apply.',alt:''},
+    {n:'Amazon / Walmart / Target',c:'Shopping',s:false,d:'Store apps. Free.',alt:''},
+    {n:'Shein',c:'Shopping',s:false,d:'Fast-fashion shopping. Free, notification-heavy.',alt:''},
+    {n:'Honey / Rakuten / Fetch',c:'Shopping',s:false,d:'Coupon & cashback apps. Free, but they track your shopping.',alt:''},
+    {n:'Free VPN apps',c:'Utility / cleaner',s:false,d:'"Free" VPNs often log and sell your browsing, and run slowly.',alt:'Free & trustworthy: Proton VPN free tier — no logs, no data selling.'},
+    {n:'Flashlight / QR scanner apps',c:'Utility / cleaner',s:false,d:'Usually unnecessary and ad-heavy — your phone already has both.',alt:'Free: built-in flashlight; your built-in Camera scans QR codes. Safe to remove.'},
+    {n:'Life360',c:'Utility / cleaner',s:true,d:'Family location tracking. Extra features are a subscription.',alt:'Free: built-in location sharing — Find My (iPhone) or Find My Device / Google Maps sharing (Android).'},
+    {n:'Microsoft Office (Word/Excel)',c:'Productivity',s:true,d:'Editing on phone/tablet can need a Microsoft 365 subscription.',alt:'Free: Google Docs & Sheets, or Office on the web.'},
+    {n:'Zoom',c:'Productivity',s:true,d:'Video meetings. Free caps group calls at 40 min; longer needs a plan.',alt:'Free: Google Meet or Jitsi Meet — no time limit for small calls.'},
+    {n:'Photomath',c:'Education',s:true,d:'Step-by-step math solver. Full steps behind a subscription.',alt:'Free: Microsoft Math Solver — fully free.'},
+    {n:'Chegg',c:'Education',s:true,d:'Homework help & textbook answers. Paid subscription.',alt:'Free: Khan Academy for lessons; your library\'s databases.'},
+    {n:'Quizlet',c:'Education',s:false,d:'Study flashcards. Free; some modes are paid.',alt:'Free: Anki flashcards (fully free, very powerful).'},
+    {n:'Kindle',c:'Streaming',s:false,d:'E-reader. App is free; books cost.',alt:'Free books: Libby (library card), or Project Gutenberg for classics.'},
+    {n:'Strava',c:'Health & fitness',s:true,d:'Run/ride tracking. Many features now behind a subscription.',alt:'Free: Nike Run Club, or your phone\'s built-in health app.'},
+    {n:'Fitbit',c:'Health & fitness',s:true,d:'Activity tracking. The app is free; "Premium" analytics are a subscription.',alt:'Free: the basic Fitbit app, plus Google Fit / Apple Health.'},
+    {n:'Flo / period trackers',c:'Health & fitness',s:true,d:'Cycle tracking. Predictions & insights push a subscription.',alt:'Free & private: Apple Health cycle tracking, or Drip (free, stores data on-device).'},
+    {n:'Adobe Lightroom',c:'Photos & camera',s:true,d:'Photo editing. Premium tools need a subscription.',alt:'Free: Snapseed (free, by Google).'},
+    {n:'Facetune',c:'Photos & camera',s:true,d:'Selfie retouching. Paid subscription with an auto-billing trial.',alt:'Free: Snapseed, or your phone\'s built-in retouch tools.'},
+    {n:'VSCO',c:'Photos & camera',s:true,d:'Photo filters. The best filters are behind a membership.',alt:'Free: Snapseed, or Lightroom\'s free tier.'},
+    {n:'Tinder / Bumble / Hinge',c:'Dating',s:false,d:'Dating apps. Free to use; "boosts" & extras are subscriptions.',alt:'The free tiers work — paid boosts are optional.'},
+    {n:'Candy Crush / Solitaire (ad games)',c:'Games',s:false,d:'Free with ads and in-app purchases. Easy to forget you installed.',alt:''}
+  ];
+  function renderRef(q){
+    q=(q||'').toLowerCase();
+    var arr=REF.filter(function(r){return !q||r.n.toLowerCase().indexOf(q)>=0||r.c.toLowerCase().indexOf(q)>=0||r.d.toLowerCase().indexOf(q)>=0});
+    var el=$('#refList');
+    if(!arr.length){ el.innerHTML='<p class="empty">No match. It may still cost money — add it manually and check your subscriptions in the Play Store / App Store.</p>'; return; }
+    el.innerHTML=arr.map(function(r){
+      return '<div class="row"><div class="body"><h3>'+esc(r.n)+' '+(r.s?'<span class="chip sub">Paid sub</span>':'<span class="chip free">Free</span>')+'</h3>'
+        +'<p>'+esc(r.c)+' — '+esc(r.d)+'</p>'
+        +(r.alt?'<p class="alt">↳ '+esc(r.alt)+'</p>':'')+'</div>'
+        +'<button class="btn ghost" data-add="'+esc(r.n)+'" data-cat="'+esc(r.c)+'" data-sub="'+r.s+'" data-alt="'+esc(r.alt||'')+'" style="align-self:center">Track</button></div>';
+    }).join('');
+    $$('#refList [data-add]').forEach(function(b){b.addEventListener('click',function(){
+      apps.push({id:'a'+Date.now()+Math.random().toString(36).slice(2,6),name:b.dataset.add,size:0,cat:b.dataset.cat,used:'Not sure',note:b.dataset.alt||'',sub:b.dataset.sub==='true',sel:false});
+      saveApps(); renderApps(); toast('Added '+b.dataset.add+' — set its size'); go('apps');
+    })});
+  }
+  $('#refSearch').addEventListener('input',function(e){renderRef(e.target.value)});
+  renderRef('');
+  renderApps();
+
+  /* ================= VOICE ASSISTANT ================= */
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  var rec=null, listening=false;
+  function speak(t){ try{ if(!window.speechSynthesis)return; speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(t); u.rate=1.02; u.pitch=1; speechSynthesis.speak(u);}catch(e){} }
+  function currentTab(){ var a=$('.tab.active'); return a?a.dataset.tab:'dupes'; }
+  function readScreen(){ speak(TAB_INTRO[currentTab()]); }
+
+  function handleCommand(text){
+    text=text.toLowerCase();
+    $('#voiceMsg').innerHTML='<b>Heard:</b> "'+esc(text)+'"';
+    var map=[
+      {k:['duplicate','photo find','dupe','same picture'],t:'dupes'},
+      {k:['where','photos go','upload','backup','back up','cloud'],t:'photos'},
+      {k:['app','subscription','uninstall','biggest'],t:'apps'},
+      {k:['leftover','cleanup','clean up','junk','space','storage'],t:'leftovers'},
+      {k:['help','guide','assistant','what can you'],t:'guide'}
+    ];
+    if(/read (this|it|screen|aloud)/.test(text)||text.indexOf('read')===0){ readScreen(); return; }
+    for(var i=0;i<map.length;i++){ for(var j=0;j<map[i].k.length;j++){ if(text.indexOf(map[i].k[j])>=0){ go(map[i].t); speak(TAB_INTRO[map[i].t]); return; } } }
+    speak("I didn't catch a command. Try: find duplicates, where do my photos go, or show my apps.");
+  }
+  var transcriptBuf='';
+  function setHoldLabel(on){ var g=$('#guideStartLabel'); if(g) g.textContent=on?'Listening… release':'Hold to talk'; }
+  function startVoice(){
+    if(!SR){ go('guide'); $('#voiceUnsupported').style.display='flex'; speak("Voice isn't supported in this browser, but everything works by tapping."); return; }
+    if(listening) return;
+    transcriptBuf='';
+    rec=new SR(); rec.lang=navigator.language||'en-US'; rec.continuous=true; rec.interimResults=false; rec.maxAlternatives=1;
+    rec.onstart=function(){ listening=true; $('#voicebar').classList.add('show'); $('#voiceBtn').classList.add('live'); setHoldLabel(true);
+      $('#voiceMsg').innerHTML='<b>Listening…</b> keep holding, then release to send.';
+    };
+    rec.onresult=function(e){
+      for(var i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal) transcriptBuf+=e.results[i][0].transcript+' '; }
+      var t=transcriptBuf.trim(); if(t) $('#voiceMsg').innerHTML='<b>Heard:</b> "'+esc(t)+'"';
+    };
+    rec.onerror=function(e){ $('#voiceMsg').innerHTML='<b>Trouble hearing you.</b> Check mic permission, then hold the mic again.'; };
+    rec.onend=function(){ listening=false; $('#voicebar').classList.remove('show'); $('#voiceBtn').classList.remove('live'); setHoldLabel(false);
+      var t=transcriptBuf.trim(); if(t) handleCommand(t);
+    };
+    try{ rec.start(); }catch(e){}
+  }
+  function stopVoice(){ if(rec&&listening){ try{rec.stop()}catch(e){} } }
+  function bindHold(btn){
+    btn.addEventListener('pointerdown',function(e){ e.preventDefault(); startVoice(); });
+    ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ btn.addEventListener(ev,function(){ stopVoice(); }); });
+    btn.addEventListener('keydown',function(e){ if((e.key===' '||e.key==='Enter')&&!listening){ e.preventDefault(); startVoice(); } });
+    btn.addEventListener('keyup',function(e){ if(e.key===' '||e.key==='Enter'){ e.preventDefault(); stopVoice(); } });
+    btn.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+  }
+  bindHold($('#voiceBtn'));
+  bindHold($('#guideStart'));
+  $('#voiceStop').addEventListener('click',stopVoice);
+  $('#guideRead').addEventListener('click',readScreen);
+  if(!SR){ $('#voiceUnsupported').style.display='flex'; }
+})();
+</script>
+</body>
+</html>
