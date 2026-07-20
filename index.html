@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12897B">
-<meta name="description" content="Clean AF — an honest, on-device phone cleanup tool: find duplicate photos, see where your photos back up, list apps with descriptions, subscriptions and free alternatives, and clean up leftovers.">
+<meta name="description" content="Clean AF — an honest, on-device phone cleanup tool: analyze for duplicate photos, videos, audio and documents; see where your photos back up; list apps with descriptions, subscriptions and free alternatives; and clean up leftovers.">
 <title>Clean AF · phone cleanup</title>
 <style>html,body{margin:0}img{max-width:100%}</style>
 </head>
@@ -269,6 +269,11 @@
   #voiceBtn,#guideStart{touch-action:none; user-select:none; -webkit-user-select:none}
   .alt{margin-top:6px; font-size:12px; color:var(--good); font-weight:650}
   .alt b{color:var(--good)}
+  .filterbar{display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 8px}
+  .fbtn{border:1px solid var(--line-strong); background:var(--surface); color:var(--muted); border-radius:999px; padding:7px 13px; font-size:12.5px; font-weight:700; display:inline-flex; gap:6px; align-items:center}
+  .fbtn.on{background:var(--accent); color:#fff; border-color:transparent}
+  .fbtn .c{font-variant-numeric:tabular-nums; opacity:.85}
+  .filebox{height:104px; display:grid; place-items:center; font-weight:800; font-size:14px; letter-spacing:.04em}
 </style>
 
 <div class="topbar">
@@ -302,35 +307,43 @@
   </div>
 
   <!-- ============ DUPLICATES ============ -->
-  <section class="view active" id="view-dupes" aria-label="Duplicate photo finder">
+  <section class="view active" id="view-dupes" aria-label="Analyze files for duplicates">
     <div class="lead">
       <span class="eyebrow">Step 1 · Reclaim space</span>
-      <h1>Find duplicate photos</h1>
-      <p>Pick photos from your phone and I'll group identical and near-identical shots side by side, keep the best one, and build you an exact list to delete.</p>
+      <h1>Analyze for duplicates</h1>
+      <p>Tap <b>Analyze</b>, grant one folder, and Clean AF checks every file inside it — including subfolders — for duplicate <b>photos, videos, audio and documents</b>, all in one place.</p>
     </div>
 
     <div class="tiles">
-      <div class="tile"><div class="k">Scanned</div><div class="v tnum" id="dScanned">0</div></div>
+      <div class="tile"><div class="k">Files checked</div><div class="v tnum" id="dScanned">0</div></div>
       <div class="tile"><div class="k">Duplicates</div><div class="v tnum" id="dDupes">0</div></div>
       <div class="tile"><div class="k">Reclaimable</div><div class="v tnum" id="dSpace">0<small> MB</small></div></div>
     </div>
 
     <div class="card">
       <div class="drop" id="drop">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-        <h3>Choose photos to scan</h3>
-        <p>Nothing leaves your phone — all matching happens on-device, in your browser.</p>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <h3>Analyze my files</h3>
+        <p>Everything is checked on your phone — no file ever leaves the device.</p>
         <div class="btnrow" style="justify-content:center">
-          <button class="btn primary" id="pickPhotos">Select photos</button>
-          <button class="btn ghost" id="pickFolder">Select a folder</button>
+          <button class="btn primary" id="analyzeBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Analyze</button>
         </div>
-        <input class="hidden-input" id="filePhotos" type="file" accept="image/*" multiple>
-        <input class="hidden-input" id="fileFolder" type="file" accept="image/*" multiple webkitdirectory directory>
+        <div class="btnrow" style="justify-content:center; margin-top:8px">
+          <button class="btn ghost" id="pickFolder">Pick a folder</button>
+          <button class="btn ghost" id="pickPhotos">Pick files</button>
+        </div>
+        <input class="hidden-input" id="filePhotos" type="file" multiple>
+        <input class="hidden-input" id="fileFolder" type="file" multiple webkitdirectory directory>
+      </div>
+      <div class="note info" id="scanHint" style="margin-top:12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><b>Why pick a folder?</b> A web page can't reach your whole phone by itself, so grant it one folder — choose <b>Internal storage</b> (or <b>DCIM</b> for just photos) and it scans everything inside, subfolders included. On iPhone, use <b>Pick files</b> — the browser doesn't allow folder scanning there. One-tap whole-phone scanning is the native-app feature.</div>
       </div>
       <div class="progress" id="progWrap" style="display:none"><i id="prog"></i></div>
       <p id="scanStatus" style="display:none; font-size:12.5px; color:var(--muted); margin-top:8px"></p>
     </div>
 
+    <div class="filterbar" id="filterbar" style="display:none"></div>
     <div id="dupeResults"></div>
   </section>
 
@@ -525,7 +538,7 @@
 
   /* ---------- tab navigation ---------- */
   var TAB_INTRO={
-    dupes:"Duplicate photo finder. Pick photos and I'll group the copies so you can delete the extras.",
+    dupes:"Analyze. Tap Analyze and pick a folder, and I'll check every file for duplicate photos, videos, audio and documents.",
     photos:"Photo upload dashboard. See every service that backs up your photos and how to switch each one off.",
     apps:"App inventory. Track your apps by size and whether they cost a subscription.",
     leftovers:"Cleanup. How to find and safely remove files left behind by apps you deleted.",
@@ -540,21 +553,62 @@
   }
   $$('.tab').forEach(function(b){b.addEventListener('click',function(){go(b.dataset.tab)})});
 
-  /* ================= DUPLICATE FINDER ================= */
+  /* ================= FILE ANALYZER (all types) ================= */
   var drop=$('#drop');
+  var isiOS=/iP(hone|ad|od)/.test(navigator.platform||'')||(/Mac/.test(navigator.platform||'')&&navigator.maxTouchPoints>1)||/iP(hone|ad|od)/.test(navigator.userAgent||'');
   ['dragenter','dragover'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('hot')})});
   ['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('hot')})});
   drop.addEventListener('drop',function(ev){ if(ev.dataTransfer&&ev.dataTransfer.files) handleFiles(ev.dataTransfer.files); });
-  $('#pickPhotos').addEventListener('click',function(){$('#filePhotos').click()});
+  $('#analyzeBtn').addEventListener('click',analyze);
   $('#pickFolder').addEventListener('click',function(){$('#fileFolder').click()});
+  $('#pickPhotos').addEventListener('click',function(){$('#filePhotos').click()});
   $('#filePhotos').addEventListener('change',function(e){handleFiles(e.target.files)});
   $('#fileFolder').addEventListener('change',function(e){handleFiles(e.target.files)});
 
-  async function sha256(buf){
-    if(!(crypto.subtle&&crypto.subtle.digest)) return 'nohash-'+buf.byteLength;
-    var h=await crypto.subtle.digest('SHA-256',buf);
-    return Array.prototype.map.call(new Uint8Array(h),function(b){return('0'+b.toString(16)).slice(-2)}).join('');
+  function tick(){ return new Promise(function(r){setTimeout(r,0)}); }
+  async function analyze(){
+    if(window.showDirectoryPicker){
+      var dir;
+      try{ dir=await window.showDirectoryPicker(); }catch(e){ return; }
+      $('#scanHint').style.display='none'; $('#scanStatus').style.display='block'; $('#scanStatus').textContent='Reading folder…';
+      var files=[];
+      try{ for await (var f of walkDir(dir,'')){ files.push(f); if(files.length%50===0){ $('#scanStatus').textContent='Found '+files.length+' files…'; await tick(); } } }catch(e){}
+      handleFiles(files);
+    } else if(isiOS){ $('#filePhotos').click(); }
+    else { $('#fileFolder').click(); }
   }
+  async function* walkDir(dir, path){
+    for await (var entry of dir.values()){
+      var p = path ? path+'/'+entry.name : entry.name;
+      if(entry.kind==='file'){ try{ var f=await entry.getFile(); try{f.relPath=p;}catch(e){} yield f; }catch(e){} }
+      else if(entry.kind==='directory'){ yield* walkDir(entry, p); }
+    }
+  }
+
+  function classify(f){
+    var n=(f.name||'').toLowerCase(), t=(f.type||'').toLowerCase();
+    if(t.indexOf('image/')===0||/\.(jpe?g|png|gif|webp|bmp|heic|heif|tiff?)$/.test(n)) return 'image';
+    if(t.indexOf('video/')===0||/\.(mp4|mov|mkv|avi|webm|m4v|3gp|flv)$/.test(n)) return 'video';
+    if(t.indexOf('audio/')===0||/\.(mp3|wav|m4a|aac|flac|ogg|oga|opus|wma|aif|aiff)$/.test(n)) return 'audio';
+    if(/\.(pdf|docx?|pptx?|xlsx?|txt|rtf|odt|ods|odp|pages|numbers|key|csv|epub|md)$/.test(n)||t.indexOf('pdf')>=0||t.indexOf('word')>=0||t.indexOf('officedocument')>=0||t.indexOf('text/')===0) return 'doc';
+    return 'other';
+  }
+  var CAT={ image:{label:'Photos',c:'#12897B'}, video:{label:'Videos',c:'#7A5AF0'},
+    audio:{label:'Audio',c:'#B4791A'}, doc:{label:'Documents',c:'#2A6CE0'}, other:{label:'Other files',c:'#5C726F'} };
+  var CATORDER=['image','video','audio','doc','other'];
+
+  function fnv(u8){ var h=0x811c9dc5>>>0; for(var i=0;i<u8.length;i++){ h^=u8[i]; h=(h+((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0; } return ('0000000'+h.toString(16)).slice(-8); }
+  function hex(buf){ return Array.prototype.map.call(new Uint8Array(buf),function(b){return('0'+b.toString(16)).slice(-2)}).join(''); }
+  async function sha(buf){ if(crypto.subtle&&crypto.subtle.digest){ try{ return hex(await crypto.subtle.digest('SHA-256',buf)); }catch(e){} } return fnv(new Uint8Array(buf)); }
+  async function fileKey(f){
+    var size=f.size, HEAD=1048576, parts=[];
+    if(size<=2*HEAD){ parts.push(new Uint8Array(await f.arrayBuffer())); }
+    else { parts.push(new Uint8Array(await f.slice(0,HEAD).arrayBuffer())); parts.push(new Uint8Array(await f.slice(size-HEAD).arrayBuffer())); }
+    var total=parts.reduce(function(s,b){return s+b.length},0), u=new Uint8Array(total), o=0;
+    parts.forEach(function(b){u.set(b,o); o+=b.length;});
+    return size+'-'+await sha(u.buffer);
+  }
+
   var ahCanvas=document.createElement('canvas'); ahCanvas.width=8; ahCanvas.height=8;
   var ahCtx=ahCanvas.getContext('2d',{willReadFrequently:true});
   function aHash(img){
@@ -576,124 +630,157 @@
   }
 
   async function handleFiles(fileList){
-    var files=Array.prototype.slice.call(fileList).filter(function(f){return /^image\//.test(f.type)||/\.(jpe?g|png|gif|webp|bmp|heic)$/i.test(f.name)});
-    if(!files.length) return;
+    var files=Array.prototype.slice.call(fileList).filter(function(f){return f&&f.size>0});
+    if(!files.length){ return; }
+    $('#scanHint').style.display='none';
     $('#progWrap').style.display='block';
     var status=$('#scanStatus'); status.style.display='block';
-    var items=[], done=0;
+    var items=[];
     for(var i=0;i<files.length;i++){
       var f=files[i];
-      status.textContent='Reading '+(i+1)+' of '+files.length+' — '+f.name;
-      var rec={file:f,name:f.name,path:f.webkitRelativePath||'',size:f.size,exact:'',ah:null,url:''};
-      try{ rec.exact=await sha256(await f.arrayBuffer()); }catch(e){ rec.exact='e'+f.size+'-'+f.name; }
-      var li=await loadImg(f);
-      if(li){ rec.url=li.url; try{rec.ah=aHash(li.img);}catch(e){} }
+      status.textContent='Checking '+(i+1)+' of '+files.length+' — '+(f.name||'file');
+      var cat=classify(f);
+      var rec={file:f,name:f.name||'file',path:f.relPath||f.webkitRelativePath||'',size:f.size,cat:cat,key:'',ah:null,sel:false,keep:false};
+      try{ rec.key=await fileKey(f); }catch(e){ rec.key='s'+f.size+'-'+(f.name||''); }
+      if(cat==='image'){ var li=await loadImg(f); if(li){ try{rec.ah=aHash(li.img);}catch(e){} URL.revokeObjectURL(li.url); } }
       items.push(rec);
-      done++; $('#prog').style.width=(done/files.length*100)+'%';
+      $('#prog').style.width=((i+1)/files.length*100)+'%';
+      if(i%25===0) await tick();
     }
     status.textContent='Grouping…';
-    renderGroups(items);
+    buildGroups(items);
     $('#progWrap').style.display='none'; status.style.display='none';
+    $('#dScanned').textContent=fmt(items.length);
   }
 
-  function renderGroups(items){
-    // exact groups
-    var byHash={};
-    items.forEach(function(it){ (byHash[it.exact]=byHash[it.exact]||[]).push(it); });
-    var groups=[], singles=[];
-    Object.keys(byHash).forEach(function(k){ (byHash[k].length>1?groups:singles).push({type:'exact',items:byHash[k]}); });
-    // near-duplicate pass over the leftover singles
-    var pool=[]; singles.forEach(function(g){ pool.push(g.items[0]); });
-    var used=new Array(pool.length).fill(false);
-    for(var a=0;a<pool.length;a++){
-      if(used[a]||pool[a].ah==null) continue;
-      var cluster=[pool[a]]; used[a]=true;
-      for(var b=a+1;b<pool.length;b++){
-        if(used[b]||pool[b].ah==null) continue;
-        if(hamming(pool[a].ah,pool[b].ah)<=5){ cluster.push(pool[b]); used[b]=true; }
-      }
-      if(cluster.length>1) groups.push({type:'near',items:cluster});
-    }
+  var curFilter='all', shownUrls=[];
+  function reclaimGroup(g){ return g.items.slice(1).reduce(function(s,i){return s+i.size},0); }
+  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 
-    var wrap=$('#dupeResults'); wrap.innerHTML='';
-    var totalDupes=0, reclaim=0;
-    groups.sort(function(x,y){return y.items.length-x.items.length});
-    groups.forEach(function(g,gi){
-      // keep the largest file as the "original"
+  function buildGroups(items){
+    var byKey={};
+    items.forEach(function(it){ (byKey[it.key]=byKey[it.key]||[]).push(it); });
+    var groups=[], singleImgs=[];
+    Object.keys(byKey).forEach(function(k){
+      var arr=byKey[k];
+      if(arr.length>1){ groups.push({type:'exact',cat:arr[0].cat,items:arr}); }
+      else if(arr[0].cat==='image'&&arr[0].ah!=null){ singleImgs.push(arr[0]); }
+    });
+    // perceptual near-duplicate pass (images only)
+    var used=new Array(singleImgs.length).fill(false);
+    for(var a=0;a<singleImgs.length;a++){
+      if(used[a]) continue;
+      var cluster=[singleImgs[a]]; used[a]=true;
+      for(var b=a+1;b<singleImgs.length;b++){
+        if(used[b]) continue;
+        if(hamming(singleImgs[a].ah,singleImgs[b].ah)<=5){ cluster.push(singleImgs[b]); used[b]=true; }
+      }
+      if(cluster.length>1) groups.push({type:'near',cat:'image',items:cluster});
+    }
+    // per group: keep the largest, preselect the rest for removal
+    groups.forEach(function(g){
       g.items.sort(function(x,y){return y.size-x.size});
-      var extras=g.items.slice(1);
-      totalDupes+=extras.length;
-      extras.forEach(function(e){reclaim+=e.size});
+      g.items.forEach(function(it,idx){ it.keep=idx===0; it.sel=idx!==0; });
+    });
+    groups.sort(function(x,y){ return reclaimGroup(y)-reclaimGroup(x); });
+    window.__dupGroups=groups;
+    curFilter='all';
+    renderFilter();
+    renderList();
+    recalcTiles();
+  }
+
+  function renderFilter(){
+    var groups=window.__dupGroups||[], bar=$('#filterbar');
+    if(!groups.length){ bar.style.display='none'; bar.innerHTML=''; return; }
+    var counts={}; var totalExtras=0;
+    groups.forEach(function(g){ var e=g.items.length-1; counts[g.cat]=(counts[g.cat]||0)+e; totalExtras+=e; });
+    var html='<button class="fbtn'+(curFilter==='all'?' on':'')+'" data-f="all">All <span class="c">'+totalExtras+'</span></button>';
+    CATORDER.forEach(function(cat){ if(counts[cat]) html+='<button class="fbtn'+(curFilter===cat?' on':'')+'" data-f="'+cat+'">'+CAT[cat].label+' <span class="c">'+counts[cat]+'</span></button>'; });
+    bar.innerHTML=html; bar.style.display='flex';
+    $$('#filterbar .fbtn').forEach(function(btn){ btn.addEventListener('click',function(){ curFilter=btn.dataset.f; renderFilter(); renderList(); }); });
+  }
+
+  function fileMedia(it){
+    if(it.cat==='image'){ var u=URL.createObjectURL(it.file); shownUrls.push(u); return '<img src="'+u+'" alt="">'; }
+    var ci=CAT[it.cat]||CAT.other, ext=((it.name.split('.').pop()||'').slice(0,5)).toUpperCase();
+    return '<div class="filebox" style="background:color-mix(in srgb,'+ci.c+' 15%,transparent);color:'+ci.c+'">'+esc(ext||CAT[it.cat].label)+'</div>';
+  }
+
+  function renderList(){
+    var wrap=$('#dupeResults');
+    shownUrls.forEach(function(u){URL.revokeObjectURL(u)}); shownUrls=[];
+    wrap.innerHTML='';
+    var groups=window.__dupGroups||[];
+    if(!groups.length){
+      wrap.innerHTML='<div class="card"><p class="empty">No duplicates found in what you analyzed — nice and tidy! Try Analyze on a bigger folder (choose Internal storage to cover everything).</p></div>';
+      return;
+    }
+    var shown=groups.filter(function(g){ return curFilter==='all'||g.cat===curFilter; });
+    shown.forEach(function(g){
+      var gi=groups.indexOf(g), ci=CAT[g.cat]||CAT.other;
       var el=document.createElement('div'); el.className='grp';
-      var head='<div class="grp-h"><span class="chip '+(g.type==='exact'?'remove':'warn')+'">'+(g.type==='exact'?'Identical':'Looks the same')+'</span>'
-        +'<span class="t">'+g.items.length+' copies</span>'
+      var kind=g.type==='near'?'<span class="chip warn">Looks the same</span>':'<span class="chip remove">Identical</span>';
+      var head='<div class="grp-h">'+kind+'<span class="t">'+ci.label+' · '+g.items.length+' copies</span>'
         +'<span class="s">saves '+mb(reclaimGroup(g)).toFixed(1)+' MB</span></div>';
       var body='<div class="thumbs">';
       g.items.forEach(function(it,idx){
-        var orig=idx===0;
-        body+='<div class="thumb '+(orig?'orig':'sel')+'" data-g="'+gi+'" data-i="'+idx+'">'
-          +'<span class="tag chip '+(orig?'keep':'remove')+'">'+(orig?'Keep':'Remove')+'</span>'
-          +(orig?'':'<button class="pick" aria-label="Toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></button>')
-          +(it.url?'<img src="'+it.url+'" alt="">':'<div style="height:104px"></div>')
+        var cls='thumb '+(it.keep?'orig':(it.sel?'sel':''));
+        body+='<div class="'+cls+'" data-g="'+gi+'" data-i="'+idx+'">'
+          +'<span class="tag chip '+(it.keep||!it.sel?'keep':'remove')+'">'+(it.keep?'Keep':(it.sel?'Remove':'Keep'))+'</span>'
+          +(it.keep?'':'<button class="pick" aria-label="Toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></button>')
+          +fileMedia(it)
           +'<div class="meta"><div class="fn">'+esc(it.name)+'</div>'
           +(it.path?'<div class="fp">'+esc(it.path)+'</div>':'')
-          +'<div class="sz">'+(it.size/1024).toFixed(0)+' KB</div></div></div>';
+          +'<div class="sz">'+(it.size<1048576?(it.size/1024).toFixed(0)+' KB':mb(it.size).toFixed(1)+' MB')+'</div></div></div>';
       });
       body+='</div>';
       el.innerHTML=head+body;
       wrap.appendChild(el);
     });
-
-    // wire selection
-    window.__dupGroups=groups;
-    $$('.thumb .pick',wrap).forEach(function(btn){
+    $$('#dupeResults .thumb .pick',wrap).forEach(function(btn){
       btn.addEventListener('click',function(){
-        var t=btn.closest('.thumb');
-        t.classList.toggle('sel');
-        var on=t.classList.contains('sel');
-        t.querySelector('.tag').className='tag chip '+(on?'remove':'keep');
-        t.querySelector('.tag').textContent=on?'Remove':'Keep';
-        recalc();
+        var t=btn.closest('.thumb'), g=window.__dupGroups[+t.dataset.g], it=g.items[+t.dataset.i];
+        it.sel=!it.sel;
+        t.classList.toggle('sel',it.sel);
+        var tag=t.querySelector('.tag'); tag.className='tag chip '+(it.sel?'remove':'keep'); tag.textContent=it.sel?'Remove':'Keep';
+        recalcTiles();
       });
     });
-
-    if(groups.length){
-      var bar=document.createElement('div'); bar.className='card'; bar.style.position='sticky'; bar.style.bottom='96px';
-      bar.innerHTML='<div class="btnrow"><button class="btn danger wide" id="exportDel">Build my delete list (<span id="delN">'+totalDupes+'</span> files)</button></div>'
-        +'<p style="font-size:12px;color:var(--muted);margin-top:10px">Green = the copy I\'m keeping. Tap a photo to change your mind. The list gives you exact names &amp; folders to delete in your gallery.</p>';
-      wrap.appendChild(bar);
-      $('#exportDel').addEventListener('click',exportDeleteList);
-    } else {
-      wrap.innerHTML='<div class="card"><p class="empty">No duplicates in that batch — nice and tidy! Try selecting more photos, or a whole folder.</p></div>';
-    }
-
-    $('#dScanned').textContent=fmt(items.length);
-    recalc();
-    function recalc(){
-      var n=$$('.thumb.sel',wrap).length, bytes=0;
-      $$('.thumb.sel',wrap).forEach(function(t){
-        var g=window.__dupGroups[+t.dataset.g]; bytes+=g.items[+t.dataset.i].size;
-      });
-      $('#dDupes').textContent=fmt(n);
-      $('#dSpace').innerHTML=mb(bytes).toFixed(1)+'<small> MB</small>';
-      var dn=$('#delN'); if(dn) dn.textContent=n;
-    }
+    var bar=document.createElement('div'); bar.className='card'; bar.style.position='sticky'; bar.style.bottom='96px';
+    bar.innerHTML='<div class="btnrow"><button class="btn danger wide" id="exportDel">Build my delete list (<span id="delN">0</span> files)</button></div>'
+      +'<p style="font-size:12px;color:var(--muted);margin-top:10px">Green = the copy I\'m keeping. Tap a file to change your mind. The list gives you exact names &amp; folders to delete in your Files or Gallery app.</p>';
+    wrap.appendChild(bar);
+    $('#exportDel').addEventListener('click',exportDeleteList);
+    recalcTiles();
   }
-  function reclaimGroup(g){ return g.items.slice(1).reduce(function(s,i){return s+i.size},0); }
-  function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+  function recalcTiles(){
+    var n=0, bytes=0;
+    (window.__dupGroups||[]).forEach(function(g){ g.items.forEach(function(it){ if(it.sel){ n++; bytes+=it.size; } }); });
+    $('#dDupes').textContent=fmt(n);
+    $('#dSpace').innerHTML=mb(bytes).toFixed(1)+'<small> MB</small>';
+    var dn=$('#delN'); if(dn) dn.textContent=n;
+  }
 
   function exportDeleteList(){
-    var lines=['DUPLICATE PHOTOS — DELETE LIST','Generated by Clean AF ·'+new Date().toLocaleString(),
-      'Delete these in your Gallery/Files app. Keep the ones NOT listed here.','',''];
-    var sel=$$('.thumb.sel'), bytes=0;
+    var groups=window.__dupGroups||[], sel=[], bytes=0;
+    groups.forEach(function(g){ g.items.forEach(function(it){ if(it.sel){ sel.push(it); bytes+=it.size; } }); });
     if(!sel.length){ alert('Nothing selected to delete yet.'); return; }
-    sel.forEach(function(t,idx){
-      var it=window.__dupGroups[+t.dataset.g].items[+t.dataset.i]; bytes+=it.size;
-      lines.push((idx+1)+'. '+it.name);
-      if(it.path) lines.push('    folder: '+it.path);
-      lines.push('    size: '+(it.size/1024).toFixed(0)+' KB');
+    var lines=['DUPLICATE FILES — DELETE LIST','Generated by Clean AF · '+new Date().toLocaleString(),
+      'Delete these in your Files / Gallery app. Keep the copies NOT listed here.','',''];
+    var byCat={}; sel.forEach(function(it){ (byCat[it.cat]=byCat[it.cat]||[]).push(it); });
+    var idx=0;
+    CATORDER.forEach(function(cat){ if(!byCat[cat]) return;
+      lines.push('== '+CAT[cat].label.toUpperCase()+' ==');
+      byCat[cat].forEach(function(it){ idx++;
+        lines.push(idx+'. '+it.name);
+        if(it.path) lines.push('    folder: '+it.path);
+        lines.push('    size: '+(it.size<1048576?(it.size/1024).toFixed(0)+' KB':mb(it.size).toFixed(1)+' MB'));
+      });
+      lines.push('');
     });
-    lines.push(''); lines.push('Total: '+sel.length+' files · '+mb(bytes).toFixed(1)+' MB to reclaim');
+    lines.push('Total: '+sel.length+' files · '+mb(bytes).toFixed(1)+' MB to reclaim');
     saveText('duplicate-delete-list.txt', lines.join('\n'));
   }
 
@@ -932,7 +1019,7 @@
     text=text.toLowerCase();
     $('#voiceMsg').innerHTML='<b>Heard:</b> "'+esc(text)+'"';
     var map=[
-      {k:['duplicate','photo find','dupe','same picture'],t:'dupes'},
+      {k:['duplicate','analy','scan','dupe','same picture','same file'],t:'dupes'},
       {k:['where','photos go','upload','backup','back up','cloud'],t:'photos'},
       {k:['app','subscription','uninstall','biggest'],t:'apps'},
       {k:['leftover','cleanup','clean up','junk','space','storage'],t:'leftovers'},

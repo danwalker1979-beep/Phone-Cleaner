@@ -8,7 +8,7 @@ ever leave the device.
 
 | Tool | What happens |
 | --- | --- |
-| **Duplicate photos** | Pick photos (or a folder); it groups identical **and** near-identical shots side by side, keeps the best copy, and builds an exact delete list with file names and folders. Matching uses SHA-256 for exact copies and an 8×8 average-hash for look-alikes — all in the browser. |
+| **Analyze for duplicates** | One **Analyze** button. Grant one folder (e.g. Internal storage) and it walks every file inside — subfolders included — checking **photos, videos, audio, and documents (PDF/Word/etc.)** for duplicates, all in one list with a type filter. Exact duplicates are matched by content fingerprint (works for any file type); photos also get "looks the same" near-matching. Everything runs on-device. On iPhone the browser only allows picking files (no folder scan). |
 | **Photo dashboard** | Every service that can auto-upload photos (Google Photos, iCloud, OneDrive, Amazon Photos, Dropbox, Samsung Cloud…) with the exact steps to switch each one off, plus a "which one is my backup home" tracker. |
 | **App inventory** | Track apps with a plain-English **description**, whether they need a **paid subscription** (free trials counted as paid), and a **free alternative** that does the same job. Sort by size, then export a **confirm-first uninstall list** — you approve every removal. Includes a searchable reference list of commonly-forgotten apps. |
 | **Cleanup** | Step-by-step guidance for finding and safely removing folders left behind by uninstalled apps, on Android and iPhone. |
