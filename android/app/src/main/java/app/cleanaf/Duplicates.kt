@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.provider.MediaStore.Files.FileColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -101,21 +102,20 @@ private suspend fun scanDuplicates(
     onProgress: (Int, Int) -> Unit,
 ): List<DupGroup> = withContext(Dispatchers.IO) {
     val collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
-    val col = MediaStore.Files.FileColumns
-    val projection = arrayOf(col._ID, col.DISPLAY_NAME, col.SIZE, col.MEDIA_TYPE)
-    val selection = "${col.MEDIA_TYPE} IN (?,?,?) AND ${col.SIZE} > 0"
+    val projection = arrayOf(FileColumns._ID, FileColumns.DISPLAY_NAME, FileColumns.SIZE, FileColumns.MEDIA_TYPE)
+    val selection = "${FileColumns.MEDIA_TYPE} IN (?,?,?) AND ${FileColumns.SIZE} > 0"
     val args = arrayOf(
-        col.MEDIA_TYPE_IMAGE.toString(),
-        col.MEDIA_TYPE_VIDEO.toString(),
-        col.MEDIA_TYPE_AUDIO.toString(),
+        FileColumns.MEDIA_TYPE_IMAGE.toString(),
+        FileColumns.MEDIA_TYPE_VIDEO.toString(),
+        FileColumns.MEDIA_TYPE_AUDIO.toString(),
     )
     data class Row(val uri: Uri, val name: String, val size: Long, val cat: String)
     val rows = ArrayList<Row>()
     context.contentResolver.query(collection, projection, selection, args, null)?.use { c ->
-        val idI = c.getColumnIndexOrThrow(col._ID)
-        val nameI = c.getColumnIndexOrThrow(col.DISPLAY_NAME)
-        val sizeI = c.getColumnIndexOrThrow(col.SIZE)
-        val typeI = c.getColumnIndexOrThrow(col.MEDIA_TYPE)
+        val idI = c.getColumnIndexOrThrow(FileColumns._ID)
+        val nameI = c.getColumnIndexOrThrow(FileColumns.DISPLAY_NAME)
+        val sizeI = c.getColumnIndexOrThrow(FileColumns.SIZE)
+        val typeI = c.getColumnIndexOrThrow(FileColumns.MEDIA_TYPE)
         while (c.moveToNext()) {
             val id = c.getLong(idI)
             rows.add(
