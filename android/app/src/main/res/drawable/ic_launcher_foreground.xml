@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Large four-point sparkle, centred within the adaptive-icon safe zone -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M56,26 C58,44 64,50 82,52 C64,54 58,60 56,78 C54,60 48,54 30,52 C48,50 54,44 56,26 Z" />
+    <!-- Small accent sparkle -->
+    <path
+        android:fillColor="#FFEAFBF7"
+        android:pathData="M78,30 C79,37 81,39 88,40 C81,41 79,43 78,50 C77,43 75,41 68,40 C75,39 77,37 78,30 Z" />
+</vector>

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,9 +34,11 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class Tab(val label: String, val icon: ImageVector) {
-    ANALYZE("Analyze", Icons.Filled.Search),
+    ANALYZE("Media", Icons.Filled.Search),
     APPS("Apps", Icons.Filled.Apps),
-    ASSISTANT("Assistant", Icons.AutoMirrored.Filled.Chat),
+    DOCS("Docs", Icons.Filled.Description),
+    JUNK("Junk", Icons.Filled.CleaningServices),
+    ASSISTANT("Chat", Icons.AutoMirrored.Filled.Chat),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,6 +64,8 @@ private fun AppRoot() {
             when (tab) {
                 Tab.ANALYZE -> AnalyzeScreen()
                 Tab.APPS -> AppsScreen()
+                Tab.DOCS -> DocumentsScreen()
+                Tab.JUNK -> LeftoversScreen()
                 Tab.ASSISTANT -> AssistantScreen()
             }
         }
